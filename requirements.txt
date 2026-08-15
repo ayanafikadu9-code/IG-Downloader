@@ -1,1 +1,7 @@
 
+python-telegram-bot>=22.8
+flask>=3.0.0
+flask-cors>=4.0.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+yt-dlp>=2024.8.6
