@@ -40,7 +40,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise SystemExit("BOT_TOKEN environment variable required.")
 
-BOT_USERNAME = os.getenv("BOT_USERNAME", "ig_downloadbot")
+BOT_USERNAME = os.getenv("BOT_USERNAME", "ig_downloaddbot")
 HOST = os.getenv("HOST", "").rstrip("/")
 AD_PAGE_URL = os.getenv("AD_PAGE_URL", "").strip()
 
