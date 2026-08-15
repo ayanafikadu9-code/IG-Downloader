@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="monetag" content="28b02dc2f0bf0d606b9d801798cff6c5">
+    <title>Instagram Downloader — Watch Ad</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+        }
+
+        .container {
+            background: #1a1a1a;
+            border-radius: 14px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+            padding: 24px 18px;
+            max-width: 460px;
+            width: 100%;
+            text-align: center;
+            color: #fff;
+        }
+
+        h1 { font-size: 22px; margin-bottom: 8px; color: #fd1d1d; font-weight: bold; }
+        .subtitle { font-size: 13px; color: #aaa; margin-bottom: 18px; line-height: 1.4; }
+
+        .ad-slot {
+            width: 100%;
+            min-height: 100px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+            font-size: 13px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .timer-section { margin: 18px 0; }
+        .timer-label { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+        .timer {
+            font-size: 36px;
+            font-weight: bold;
+            color: #fd1d1d;
+            font-family: 'Courier New', monospace;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+        .button-container { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+
+        .verify-btn {
+            display: none;
+            width: 100%;
+            padding: 13px;
+            font-size: 15px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #2ea043 0%, #27a934 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .verify-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .back-btn {
+            width: 100%;
+            padding: 11px;
+            font-size: 13px;
+            font-weight: bold;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 8px;
+            text-decoration: none;
+        }
+
+        .info-text { font-size: 11px; color: #888; margin-top: 14px; line-height: 1.4; }
+        .status { margin-top: 8px; font-size: 13px; color: #aaa; }
+        .status.loading::before { content: "⏳ "; }
+        .status.complete { color: #2ea043; }
+        .status.complete::before { content: "✅ "; }
+        .error { color: #fd1d1d; }
+        .error::before { content: "❌ "; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Watch Ad to Unlock</h1>
+        <p class="subtitle">Your Instagram video will be ready when the timer finishes!</p>
+
+        <div class="ad-slot" id="ad-slot"></div>
+
+        <div class="timer-section">
+            <div class="timer-label">⏱️ Time Remaining:</div>
+            <div class="timer" id="countdown">15</div>
+            <div class="status loading" id="status">Watching ad... Do not close this tab!</div>
+        </div>
+
+        <div class="button-container">
+            <button id="continue-btn" class="verify-btn" onclick="handleVerify()" disabled>
+                ✅ Verify & Get Your Video
+            </button>
+            <a href="https://t.me/ig_downloadbot" class="back-btn">
+                ◀️ Back to Bot
+            </a>
+        </div>
+
+        <p class="info-text">
+            💡 <strong>Tip:</strong> Make sure you watch the complete ad. Do not close this tab or refresh!
+        </p>
+    </div>
+
+    <!-- Same two Monetag zones already verified on this domain -->
+    <script>(function(s){s.dataset.zone='11561067',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+    <script>(function(s){s.dataset.zone='11560031',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+
+    <script>
+        let timeLeft = 15;
+        let adComplete = false;
+        const countdownEl = document.getElementById("countdown");
+        const continueBtn = document.getElementById("continue-btn");
+        const statusEl = document.getElementById("status");
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get("user_id");
+        const jobId = urlParams.get("job_id");
+
+        let countdownTimer = setInterval(function () {
+            timeLeft--;
+            countdownEl.innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(countdownTimer);
+                adComplete = true;
+                countdownEl.innerText = "✅ Complete!";
+                continueBtn.style.display = "block";
+                continueBtn.disabled = false;
+                statusEl.textContent = "Ad completed! Click below to verify.";
+                statusEl.classList.add("complete");
+                statusEl.classList.remove("loading");
+            }
+        }, 1000);
+
+        async function handleVerify() {
+            if (!adComplete) {
+                statusEl.textContent = "⏳ Please wait for timer to finish!";
+                statusEl.classList.add("error");
+                return;
+            }
+
+            continueBtn.disabled = true;
+            statusEl.textContent = "Verifying... Please wait...";
+
+            try {
+                // CHANGE_ME: set this to your IG bot's real Render URL once deployed.
+                const response = await fetch("https://REPLACE-WITH-YOUR-RENDER-URL.onrender.com/verify_ad", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ user_id: userId, job_id: jobId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    statusEl.textContent = "✅ Verified! Redirecting to Telegram...";
+                    statusEl.classList.remove("error");
+                    statusEl.classList.add("complete");
+                    setTimeout(() => {
+                        window.location.href = `https://t.me/ig_downloadbot?start=ad_verified_${jobId}`;
+                    }, 2000);
+                } else {
+                    statusEl.textContent = "❌ Verification failed. Please try again.";
+                    statusEl.classList.add("error");
+                    continueBtn.disabled = false;
+                }
+            } catch (error) {
+                statusEl.textContent = "❌ Network error. Please try again.";
+                statusEl.classList.add("error");
+                continueBtn.disabled = false;
+            }
+        }
+
+        window.addEventListener("beforeunload", function (e) {
+            if (!adComplete) {
+                e.preventDefault();
+                e.returnValue = "Ad not completed!";
+                return "Ad not completed!";
+            }
+        });
+
+        if (!userId || !jobId) {
+            statusEl.textContent = "⚠️ Missing parameters. Please go back to bot.";
+            statusEl.classList.add("error");
+            countdownEl.innerText = "❌";
+            clearInterval(countdownTimer);
+        }
+    </script>
+</body>
+</html>
