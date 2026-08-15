@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Instagram Reels/Video Downloader Telegram Bot
@@ -23,7 +22,7 @@ import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, WebAppInfo
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -40,7 +39,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise SystemExit("BOT_TOKEN environment variable required.")
 
-BOT_USERNAME = os.getenv("BOT_USERNAME", "ig_downloaddbot")
+BOT_USERNAME = os.getenv("BOT_USERNAME", "ig_downloadbot")
 HOST = os.getenv("HOST", "").rstrip("/")
 AD_PAGE_URL = os.getenv("AD_PAGE_URL", "").strip()
 
@@ -354,7 +353,7 @@ def make_ad_gate_keyboard(user_id: int, job_id: str, lang: str):
     s = strings_for(lang)
     ad_url = f"{AD_PAGE_URL}?user_id={user_id}&job_id={job_id}" if AD_PAGE_URL else "https://example.com"
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(s["btn_watch_ad"], url=ad_url, style="danger")],
+        [InlineKeyboardButton(s["btn_watch_ad"], web_app=WebAppInfo(url=ad_url), style="danger")],
         [InlineKeyboardButton(s["btn_buy_premium"], callback_data="buy_lifetime", style="primary")],
         [InlineKeyboardButton(s["btn_cancel"], callback_data="cancel", style="danger")],
     ])
