@@ -42,6 +42,9 @@ if not BOT_TOKEN:
 BOT_USERNAME = os.getenv("BOT_USERNAME", "ig_downloadbot")
 HOST = os.getenv("HOST", "").rstrip("/")
 AD_PAGE_URL = os.getenv("AD_PAGE_URL", "").strip()
+HOST = os.getenv("HOST", "").rstrip("/")
+KEEPALIVE_ENABLED = os.getenv("KEEPALIVE_ENABLED", "0") == "1"
+KEEPALIVE_INTERVAL = int(os.getenv("KEEPALIVE_INTERVAL", 300))
 
 # Primary: a hosted API that returns a direct video URL for a Reel/post
 # (e.g. a self-hosted or demo instance of Okramjimmy/Instagram-reels-downloader).
@@ -532,6 +535,69 @@ def process_download_job(chat_id: int, user_id: int, ig_url: str, mode: str = "v
             pass
 
 # ============ BOT HANDLERS ============
+def get_all_user_ids() -> list:
+    rows = _db_exec("SELECT user_id FROM users", fetchall=True)
+    return [r[0] for r in rows] if rows else []
+
+def copy_message_via_bot(from_chat_id: int, message_id: int, to_chat_id: int):
+    url = f"{TELEGRAM_API_BASE}/copyMessage"
+    payload = {"chat_id": to_chat_id, "from_chat_id": from_chat_id, "message_id": message_id}
+    r = requests.post(url, json=payload, timeout=20)
+    r.raise_for_status()
+    return r.json()
+
+def run_broadcast_text(admin_chat_id: int, text: str, user_ids: list):
+    sent, failed = 0, 0
+    for uid in user_ids:
+        try:
+            send_telegram_message(uid, text)
+            sent += 1
+        except Exception:
+            failed += 1
+        time.sleep(0.05)
+    send_telegram_message(admin_chat_id, f"✅ Broadcast complete.\nSent: {sent}\nFailed: {failed}")
+
+def run_broadcast_copy(admin_chat_id: int, source_chat_id: int, source_message_id: int, user_ids: list):
+    sent, failed = 0, 0
+    for uid in user_ids:
+        try:
+            copy_message_via_bot(source_chat_id, source_message_id, uid)
+            sent += 1
+        except Exception:
+            failed += 1
+        time.sleep(0.05)
+    send_telegram_message(admin_chat_id, f"✅ Broadcast complete.\nSent: {sent}\nFailed: {failed}")
+
+async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    if user_id not in ADMIN_IDS:
+        return
+    message = update.message
+    parts = message.text.split(maxsplit=1) if message.text else []
+    broadcast_text = parts[1] if len(parts) > 1 else None
+    if not broadcast_text and not message.reply_to_message:
+        send_telegram_message(
+            chat_id,
+            "📢 <b>Broadcast usage:</b>\n\n"
+            "• <code>/broadcast Your message here</code>\n"
+            "• Or reply to any message with <code>/broadcast</code> to forward it to everyone"
+        )
+        return
+    user_ids = get_all_user_ids()
+    if not user_ids:
+        send_telegram_message(chat_id, "No users to broadcast to yet.")
+        return
+    send_telegram_message(chat_id, f"📢 Starting broadcast to {len(user_ids)} users...")
+    if message.reply_to_message:
+        threading.Thread(
+            target=run_broadcast_copy,
+            args=(chat_id, message.reply_to_message.chat.id, message.reply_to_message.message_id, user_ids),
+            daemon=True
+        ).start()
+    else:
+        threading.Thread(target=run_broadcast_text, args=(chat_id, broadcast_text, user_ids), daemon=True).start()
+
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
@@ -714,13 +780,27 @@ def run_flask():
     port = int(os.getenv("PORT", "5000"))
     flask_app.run(host="0.0.0.0", port=port, threaded=True)
 
+def keepalive_loop():
+    if not KEEPALIVE_ENABLED or not HOST:
+        return
+    target = HOST + "/health"
+    while True:
+        try:
+            requests.get(target, timeout=10)
+        except Exception:
+            pass
+        time.sleep(KEEPALIVE_INTERVAL)
+
 def main():
     init_db()
     threading.Thread(target=run_flask, daemon=True).start()
+    if KEEPALIVE_ENABLED:
+        threading.Thread(target=keepalive_loop, daemon=True).start()
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("stats", stats_command))
+    application.add_handler(CommandHandler("broadcast", broadcast_command))
     application.add_handler(CallbackQueryHandler(callback_query_handler))
     application.add_handler(PreCheckoutQueryHandler(pre_checkout_handler))
     application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_handler))
